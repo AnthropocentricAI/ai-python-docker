@@ -1,0 +1,40 @@
+dist: xenial
+
+notifications:
+  email: false
+
+git:
+  depth: 5
+  submodules: false
+
+language: bash
+services: docker
+
+env:
+  - IMAGE="_experimental"
+  - IMAGE="_experimental-dev"
+  - IMAGE="_versioned"
+  - IMAGE="_versioned-dev"
+
+matrix:
+  fast_finish: true
+  allow_failures:
+    - env: IMAGE="_experimental"
+    - env: IMAGE="_experimental-dev"
+
+before_script:
+  - cd "$IMAGE"
+#   - |
+#     image_clean=${IMAGE//_/};
+#     image_name=$(echo $image_clean | cut -f1 -d-);
+#     image_tag=$(echo $STR | cut -f2 -d-)
+  - image_name="ai-python:${IMAGE//_/}"
+
+script:
+  - docker build -t "$image_name" .
+  - docker run "$image_name" sh -c "pip list"
+#   - echo "echo 'test'" | docker run -i "$image_name" sh -
+  - docker run -i "$image_name" python < test.py
+
+after_script:
+  - docker images
