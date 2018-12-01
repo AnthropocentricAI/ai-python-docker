@@ -10,18 +10,6 @@ git:
 language: bash
 services: docker
 
-env:
-  - IMAGE="_experimental"
-  - IMAGE="_experimental-dev"
-  - IMAGE="_versioned"
-  - IMAGE="_versioned-dev"
-
-matrix:
-  fast_finish: true
-  allow_failures:
-    - env: IMAGE="_experimental"
-    - env: IMAGE="_experimental-dev"
-
 before_script:
   - cd "$IMAGE"
 #   - |
@@ -32,9 +20,33 @@ before_script:
 
 script:
   - docker build -t "$image_name" .
+
+after_script:
+  - cd "$TRAVIS_BUILD_DIR"
+  - docker images
   - docker run "$image_name" sh -c "pip list"
 #   - echo "echo 'test'" | docker run -i "$image_name" sh -
   - docker run -i "$image_name" python < test.py
 
-after_script:
-  - docker images
+jobs:
+  allow_failures:
+    - stage: Test Master Docker Images
+  include:
+    - &master-build
+      # Master builds -- all can fail
+      stage: Test Master Docker Images
+      if: branch = master
+      env: IMAGE="_experimental"
+    - <<: *master-build
+      env: IMAGE="_experimental-dev"
+    - <<: *master-build
+      env: IMAGE="_versioned"
+    - <<: *master-build
+      env: IMAGE="_versioned-dev"
+    - &tag-build
+      # Tag builds -- none can fail
+      stage: Test Tagged Docker Images
+      if: tag IS present
+      env: IMAGE="_versioned"
+    - <<: *tag-build
+      env: IMAGE="_versioned-dev"
